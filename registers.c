@@ -1,8 +1,7 @@
 #include "registers.h"
 
 typedef struct Register {
-        UArray_T regs;
-        int size;
+        uint32_t regs[8];
 } *Register;
 
 /* Function: initiate_registers
@@ -14,8 +13,6 @@ Register initiate_registers(int size)
 {
 	Register r;
 	NEW(r);
-	r->regs = UArray_new(size, sizeof(uint32_t));
-	r->size = size;
 	return r;
 }
 
@@ -26,7 +23,7 @@ Register initiate_registers(int size)
  */
 void register_free(Register *r)
 {
-	UArray_free(&(*r)->regs);
+	//UArray_free(&(*r)->regs);
 }
 	
 /* Function: get_register_at
@@ -39,8 +36,8 @@ uint32_t get_register_at(Register r, Um_register n)
 {
 	assert(n >= 0);
 	assert(n <= 7);
-	uint32_t *val = (uint32_t *)(uintptr_t) UArray_at(r->regs, n);
-	return *val;
+	uint32_t val = r->regs[n];
+	return val;
 }
 
 /* Function: set_register_at
@@ -53,7 +50,5 @@ void set_register_at(Register r, Um_register n, uint32_t value)
 {
 	assert(n >= 0);
 	assert(n <= 7);
-	uint32_t *val_p = (uint32_t *)(uintptr_t)UArray_at(r->regs, n);
-	*val_p = value;
-	(void) val_p;
+	r->regs[n] = value;
 }
