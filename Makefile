@@ -19,7 +19,7 @@ IFLAGS = -I/comp/40/include -I/usr/sup/cii40/include/cii
 # to use the GNU 99 standard to get the right items in time.h for the
 # the timing support to compile.
 # 
-CFLAGS = -g -std=gnu99 -O1 -Wall -Wextra -Werror -Wfatal-errors -Wno-unused-variable -Wno-unused-parameter -Wno-unused-function$(IFLAGS) 
+CFLAGS = -g -std=gnu99 -O2 -Wall -Wextra -Werror -Wfatal-errors -Wno-unused-variable -Wno-unused-parameter -Wno-unused-function$(IFLAGS) 
 
 # Linking flags
 # Set debugging information and update linking path
@@ -28,7 +28,7 @@ LDFLAGS = -g -L/comp/40/lib64 -L/usr/sup/cii40/lib64
 
 # Libraries needed for linking
 # All programs cii40 (Hanson binaries) and *may* need -lm (math)
-LDLIBS = -lnetpbm -lcii40-O1 -lm -lrt -lbitpack -lum-dis
+LDLIBS = -lnetpbm -lcii40-O2 -lm -lrt -lbitpack -lum-dis
 
 # Collect all .h files in your directory.
 # This way, you can never forget to add
@@ -61,7 +61,7 @@ all: um
 
 ##segment: segments.o 
 
-um: segments.o registers.o instructions.o memory.o um.o
+um: registers.o instructions.o memory.o um.o
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 clean:

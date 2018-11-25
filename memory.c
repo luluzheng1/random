@@ -1,7 +1,6 @@
 #include "memory.h"
 #include "mem.h"
 #include "uarray.h"
-#include "segments.h"
 #include "assert.h"
 #include <stdio.h>
 typedef struct Memory {
@@ -17,14 +16,14 @@ typedef struct Memory {
  */
 Memory memory_new(int size)
 {
-	Memory UM_memory;
-	NEW(UM_memory);
-	UM_memory->memory = Seq_new(0);
+        Memory UM_memory;
+        NEW(UM_memory);
+        UM_memory->memory = Seq_new(0);
         UArray_T zero_seg = UArray_new(size, sizeof(uint32_t));
         Seq_addhi(UM_memory->memory,(void *)zero_seg);
-	UM_memory->id_tracker = Seq_new(size);
-	UM_memory->size = 1;
-	return UM_memory;
+        UM_memory->id_tracker = Seq_new(size);
+        UM_memory->size = 1;
+        return UM_memory;
 }
 
 /* Function: memory_free 
@@ -34,16 +33,16 @@ Memory memory_new(int size)
  */
 void memory_free(Memory *m)
 {
-	Seq_free(&((*m)->id_tracker));
-	int length = (*m)->size;
-	while (length > 0){
-		UArray_T u_t = Seq_remlo((*m)->memory);
+        Seq_free(&((*m)->id_tracker));
+        int length = (*m)->size;
+        while (length > 0){
+                UArray_T u_t = Seq_remlo((*m)->memory);
                 if (u_t == NULL)
                         continue;
-		UArray_free(&u_t);
-		length--;
-	}
-	Seq_free(&(*m)->memory);
+                UArray_free(&u_t);
+                length--;
+        }
+        Seq_free(&(*m)->memory);
 }
 
 /* Function: add_segment
@@ -53,18 +52,18 @@ void memory_free(Memory *m)
  */
 Umsegment_Id add_segment(Memory memory, int size)
 {
-	int id = 0;
-	int length = Seq_length(memory->id_tracker);
-	UArray_T segment = UArray_new(size, sizeof(Word));
+        int id = 0;
+        int length = Seq_length(memory->id_tracker);
+        UArray_T segment = UArray_new(size, sizeof(Word));
         
-	if(length != 0){
-		id = (int)(uintptr_t)Seq_remlo(memory->id_tracker);
-		Seq_put(memory->memory, id, segment);
-	}
-	else {
-		Seq_addhi(memory->memory, segment);
-		id = Seq_length(memory->memory) - 1;
-	}
+        if(length != 0){
+                id = (int)(uintptr_t)Seq_remlo(memory->id_tracker);
+                Seq_put(memory->memory, id, segment);
+        }
+        else {
+                Seq_addhi(memory->memory, segment);
+                id = Seq_length(memory->memory) - 1;
+        }
         memory->size += 1;
         return id;
 }
@@ -76,11 +75,11 @@ Umsegment_Id add_segment(Memory memory, int size)
  */
 void remove_segment(Memory memory, Umsegment_Id id)
 {
-	int null = 0;
-	UArray_T segment = Seq_get(memory->memory, id);
-	UArray_free(&segment);
-	Seq_put(memory->memory, id, (void *)(uintptr_t)null);
-	Seq_addhi(memory->id_tracker, (void *)(uintptr_t)id); 
+        int null = 0;
+        UArray_T segment = Seq_get(memory->memory, id);
+        UArray_free(&segment);
+        Seq_put(memory->memory, id, (void *)(uintptr_t)null);
+        Seq_addhi(memory->id_tracker, (void *)(uintptr_t)id); 
         memory->size -= 1;
 }
 
@@ -91,10 +90,10 @@ void remove_segment(Memory memory, Umsegment_Id id)
  */
 void *get_segment(Memory memory, Umsegment_Id id)
 {
-	UArray_T segment = (UArray_T)Seq_get(memory->memory, id);
-	int length = UArray_length(segment);
-	UArray_T copy = UArray_copy(segment, length);
-	return (void *)copy;
+        UArray_T segment = (UArray_T)Seq_get(memory->memory, id);
+        int length = UArray_length(segment);
+        UArray_T copy = UArray_copy(segment, length);
+        return (void *)copy;
 }
 
 /* Function: put_segment
@@ -106,7 +105,7 @@ void put_segment(Memory m, void *segment)
 {
         UArray_T zero_seg = Seq_get(m->memory, 0);
         UArray_free(&zero_seg);
-	Seq_put(m->memory, 0, segment);
+        Seq_put(m->memory, 0, segment);
 }
 
 /* Function: get_value_at
@@ -114,11 +113,14 @@ void put_segment(Memory m, void *segment)
  * Parameters: Memory, Unsegment_Id, int 
  * Return: Word (uint32_t)
  */
+
 Word get_value_at(Memory memory, Umsegment_Id id, int offset)
 {
-	int length = Seq_length(memory->memory);
-	UArray_T segment = Seq_get(memory->memory, id);
-	Word *word = get_word(offset, segment);
+        int mem_length = Seq_length(memory->memory);
+        UArray_T segment = Seq_get(memory->memory, id);
+        /* COMBINE GET_WORD */
+        int seg_length = UArray_length(segment);
+        Word *word = (Word *)(uintptr_t) UArray_at(segment, offset);
         return *word;
 }
 
@@ -129,7 +131,9 @@ Word get_value_at(Memory memory, Umsegment_Id id, int offset)
  */
 void set_value_at(Memory memory, Umsegment_Id id, int offset, Word value)
 {
-	int length = Seq_length(memory->memory);
+        int length = Seq_length(memory->memory);
         UArray_T segment = Seq_get(memory->memory, id);
-	set_word(offset, segment, value);
+        Word *word_p = (Word *)(uintptr_t)UArray_at(segment, offset);
+        *word_p = value;
+        (void) word_p;
 }
