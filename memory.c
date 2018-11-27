@@ -116,10 +116,8 @@ void put_segment(Memory m, void *segment)
 
 Word get_value_at(Memory memory, Umsegment_Id id, int offset)
 {
-        int mem_length = Seq_length(memory->memory);
         UArray_T segment = Seq_get(memory->memory, id);
         /* COMBINE GET_WORD */
-        int seg_length = UArray_length(segment);
         Word *word = (Word *)(uintptr_t) UArray_at(segment, offset);
         return *word;
 }
@@ -131,7 +129,6 @@ Word get_value_at(Memory memory, Umsegment_Id id, int offset)
  */
 void set_value_at(Memory memory, Umsegment_Id id, int offset, Word value)
 {
-        int length = Seq_length(memory->memory);
         UArray_T segment = Seq_get(memory->memory, id);
         Word *word_p = (Word *)(uintptr_t)UArray_at(segment, offset);
         *word_p = value;
