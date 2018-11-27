@@ -1,6 +1,5 @@
 #include "instructions.h"
 #include "memory.h"
-#include "registers.h"
 #include <stdio.h>
 #include <sys/stat.h>
 #include <stdlib.h>
@@ -31,7 +30,6 @@ int main(int argc, char *argv[])
         assert(file_size < MEGABYTE);
 
         Memory m = memory_new(file_size / 4);
-        Register r = initiate_registers(8);
         /* Fill 0 segment with all instructions */
         int num_inst = 0;
         uint32_t instruction = 0;
@@ -54,15 +52,13 @@ int main(int argc, char *argv[])
 	
         while (op_code != HALT){
                 uint32_t instruction = get_value_at(m, 0, counter);
-                op_code = read_instruction(r, instruction, m, &counter);
+                op_code = read_instruction(instruction, m, &counter);
 		if(op_code != LOADP){
 			counter++;
 		}
         }
         memory_free(&m);
-	register_free(&r);
 	free(m);
-	free(r);
 }
 
 /*uint32_t read_next_instruction(Memory m, Register r, uint32_t *counter)
