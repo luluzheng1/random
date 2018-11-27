@@ -1,4 +1,3 @@
-- set UArray_T in Registers to uint32_t array (DONE; check for instruction calls using valgrind)
 - move everything from Registers to instructions.c (gets rid of struct entirely!)
 - combine add, mult, div instructions into one function; then use switch statement?
 - global r_a, r_b, r_c and val_a, val_b, val_c

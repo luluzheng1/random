@@ -11,7 +11,7 @@
 #define BYTESIZE 8
 #define MEGABYTE 1000000000
 
-uint32_t read_next_instruction(Memory m, Register r, uint32_t *counter);
+//uint32_t read_next_instruction(Memory m, Register r, uint32_t *counter);
 typedef enum Um_opcode {
         CMOV = 0, SLOAD, SSTORE, ADD, MUL, DIV,
         NAND, HALT, ACTIVATE, INACTIVATE, OUT, IN, LOADP, LV
@@ -53,7 +53,8 @@ int main(int argc, char *argv[])
 	instruction = get_value_at(m, 0, counter);
 	
         while (op_code != HALT){
-                op_code = read_next_instruction(m, r, &counter);
+                uint32_t instruction = get_value_at(m, 0, counter);
+                op_code = read_instruction(r, instruction, m, &counter);
 		if(op_code != LOADP){
 			counter++;
 		}
@@ -64,9 +65,9 @@ int main(int argc, char *argv[])
 	free(r);
 }
 
-uint32_t read_next_instruction(Memory m, Register r, uint32_t *counter)
+/*uint32_t read_next_instruction(Memory m, Register r, uint32_t *counter)
 {
 	uint32_t instruction = get_value_at(m, 0, *counter);
         uint32_t op_code = read_instruction(r, instruction, m, counter);
         return op_code;
-}
+}*/
