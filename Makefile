@@ -1,6 +1,6 @@
 # Makefile for UM (Comp 40 Assignment 6)
 # 
-# Last updated: November 20, 2018
+# Last updated: November 27, 2018
 
 
 ############## Variables ###############
@@ -61,7 +61,7 @@ all: um
 
 ##segment: segments.o 
 
-um: memory.o um.o
+um: um.o
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 clean:
