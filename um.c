@@ -21,18 +21,19 @@ typedef enum Um_opcode {
         CMOV = 0, SLOAD, SSTORE, ADD, MUL, DIV,
         NAND, HALT, ACTIVATE, INACTIVATE, OUT, IN, LOADP, LV
 } Um_opcode;
-typedef uint32_t Umsegment_Id;
-typedef uint32_t Word;
-typedef uint32_t Um_instruction;
+typedef uint32_t Umsegment_Id, Word, Um_instruction;
 typedef enum Um_register {r0 = 0, r1, r2, r3, r4, r5, r6, r7} Um_register;
-uint32_t r[8];
 
+uint32_t r[8];
 Um_instruction r_c, r_a, r_b;
 uint32_t val_b, val_c, val_a;
-Seq_T memory;
-Seq_T id_tracker;
+Seq_T memory, id_tracker;
 int size;
-
+/*instructions.c*/
+static inline uint64_t Bitpack_getu(uint64_t word, unsigned width, 
+				    unsigned lsb);
+static inline Um_instruction read_instruction(Um_instruction word, 
+					      uint32_t *counter);
 static inline void cmov(Um_instruction word);
 static inline void sload(Um_instruction word, uint32_t *counter);
 static inline void sstore(Um_instruction word);
@@ -46,9 +47,7 @@ static inline void out(Um_instruction word);
 static inline void in(Um_instruction word);
 static inline void loadp(Um_instruction word, uint32_t *counter);
 static inline void lv(Um_instruction word);
-static inline uint64_t Bitpack_getu(uint64_t word, unsigned width, unsigned lsb);
-static inline Um_instruction read_instruction(Um_instruction word, 
-					      uint32_t *counter);
+/*memory.c*/
 static inline void memory_new(int size);
 static inline void memory_free();
 static inline Umsegment_Id add_segment(int size);
@@ -442,7 +441,6 @@ static inline void put_segment(void *segment)
  * Parameters: Memory, Unsegment_Id, int 
  * Return: Word (uint32_t)
  */
-
 static inline Word get_value_at(Umsegment_Id id, int offset)
 {
         UArray_T segment = Seq_get(memory, id);
