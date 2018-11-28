@@ -25,26 +25,23 @@ uint32_t val_b, val_c, val_a;
 static inline void three_registers(Um_instruction word, uint32_t *r_a, 
                                    uint32_t *r_b, uint32_t *r_c);
 static inline void cmov(Um_instruction word);
-static inline void sload(Um_instruction word, Memory m, 
-                         uint32_t *counter);
-static inline void sstore(Um_instruction word, Memory m);
+static inline void sload(Um_instruction word, uint32_t *counter);
+static inline void sstore(Um_instruction word);
 static inline void add(Um_instruction word);
 static inline void mult(Um_instruction word);
 static inline void div(Um_instruction word);
 static inline void nand(Um_instruction word);
-static inline void map(Um_instruction word, Memory m);
-static inline void unmap(Um_instruction word, Memory m);
+static inline void map(Um_instruction word);
+static inline void unmap(Um_instruction word);
 static inline void out(Um_instruction word);
 static inline void in(Um_instruction word);
-static inline void loadp(Um_instruction word, Memory m, 
-                         uint32_t *counter);
+static inline void loadp(Um_instruction word, uint32_t *counter);
 static inline void lv(Um_instruction word);
 static inline uint64_t Bitpack_getu(uint64_t word, unsigned width, unsigned lsb);
 static inline uint32_t get_register_at(Um_register n);
 static inline void set_register_at(Um_register n, uint32_t value);
 
-Um_instruction read_instruction(Um_instruction word, Memory m, 
-				uint32_t *counter)
+Um_instruction read_instruction(Um_instruction word, uint32_t *counter)
 {
 	Um_instruction op = Bitpack_getu(word, OP_WIDTH, LSB_OP);
         
@@ -53,10 +50,10 @@ Um_instruction read_instruction(Um_instruction word, Memory m,
                         cmov(word);
 			break;
 		case SLOAD :
-                        sload(word, m, counter);
+                        sload(word, counter);
 			break;
 		case SSTORE :
-                        sstore(word, m);
+                        sstore(word);
 			break;
 		case ADD :
                         add(word);
@@ -73,10 +70,10 @@ Um_instruction read_instruction(Um_instruction word, Memory m,
 		case HALT :
 			break;
 		case ACTIVATE :
-                        map(word, m);
+                        map(word);
 			break;
 		case INACTIVATE :
-                        unmap(word, m);
+                        unmap(word);
 			break;
 		case OUT :
                         out(word);
@@ -85,7 +82,7 @@ Um_instruction read_instruction(Um_instruction word, Memory m,
                         in(word);
 			break;
 		case LOADP :
-                        loadp(word, m, counter);
+                        loadp(word, counter);
 			break;
 		case LV :
                         lv(word);
@@ -123,20 +120,19 @@ static inline void cmov(Um_instruction word)
 	}
 }
 
-static inline void sload(Um_instruction word, Memory m, 
-                         uint32_t *counter)
+static inline void sload(Um_instruction word, uint32_t *counter)
 {
         
         three_registers(word, &r_a, &r_b, &r_c);
 	
 	val_b = get_register_at(r_b);
 	val_c = get_register_at(r_c);
-	val_a = get_value_at(m, val_b, val_c);
+	val_a = get_value_at(val_b, val_c);
 	
 	set_register_at(r_a, val_a);
 }
 
-static inline void sstore(Um_instruction word, Memory m)
+static inline void sstore(Um_instruction word)
 {
         
         three_registers(word, &r_a, &r_b, &r_c);
@@ -145,7 +141,7 @@ static inline void sstore(Um_instruction word, Memory m)
         val_b = get_register_at(r_b);
         val_c = get_register_at(r_c);
 
-        set_value_at(m, val_a, val_b, val_c);        
+        set_value_at(val_a, val_b, val_c);        
 }
 
 static inline void add(Um_instruction word)
@@ -203,7 +199,7 @@ static inline void nand(Um_instruction word)
         set_register_at(r_a, nand);
 }
 
-static inline void map(Um_instruction word, Memory m)
+static inline void map(Um_instruction word)
 {
         uint32_t id, length;
         
@@ -212,17 +208,17 @@ static inline void map(Um_instruction word, Memory m)
 
         length = get_register_at(r_c);
         
-        id = add_segment(m, length);
+        id = add_segment(length);
 
         set_register_at(r_b, id);
 }
 
-static inline void unmap(Um_instruction word, Memory m)
+static inline void unmap(Um_instruction word)
 {
         r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
 
         val_c = get_register_at(r_c);
-        remove_segment(m, val_c);
+        remove_segment(val_c);
 }
 
 static inline void out(Um_instruction word)
@@ -245,18 +241,17 @@ static inline void in(Um_instruction word)
 	}
 }
 
-static inline void loadp(Um_instruction word, Memory m, 
-                         uint32_t *counter)
+static inline void loadp(Um_instruction word, uint32_t *counter)
 {
 	r_b = Bitpack_getu(word, REG_WIDTH, LSB_B);
 	r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
 	val_b = get_register_at(r_b);
 	val_c = get_register_at(r_c);
 	if(val_b != 0) {
-		UArray_T program = (UArray_T)get_segment(m, val_b);
-		put_segment(m, program);
+		UArray_T program = (UArray_T)get_segment(val_b);
+		put_segment(program);
 	}
-	get_value_at(m, 0, val_c);
+	get_value_at(0, val_c);
 	*counter = val_c;
 }
 

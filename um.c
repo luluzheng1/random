@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
         int file_size = s.st_size;
         assert(file_size < MEGABYTE);
 
-        Memory m = memory_new(file_size / 4);
+        memory_new(file_size / 4);
         /* Fill 0 segment with all instructions */
         int num_inst = 0;
         uint32_t instruction = 0;
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
                 instruction += c;
                 /* After reading in 4 chars, add the instruction to 0 segment */
                 if ((i % 4 == 3)){
-                        set_value_at(m, 0, num_inst, instruction);
+                        set_value_at(0, num_inst, instruction);
                         instruction = 0;
                         num_inst++;
                 }
@@ -48,17 +48,16 @@ int main(int argc, char *argv[])
         int op_code = 0;
 	int index = 0;
 	uint32_t counter = 0;
-	instruction = get_value_at(m, 0, counter);
+	instruction = get_value_at(0, counter);
 	
         while (op_code != HALT){
-                uint32_t instruction = get_value_at(m, 0, counter);
-                op_code = read_instruction(instruction, m, &counter);
+                uint32_t instruction = get_value_at(0, counter);
+                op_code = read_instruction(instruction, &counter);
 		if(op_code != LOADP){
 			counter++;
 		}
         }
-        memory_free(&m);
-	free(m);
+        memory_free();
 }
 
 /*uint32_t read_next_instruction(Memory m, Register r, uint32_t *counter)
