@@ -22,8 +22,8 @@ uint32_t r[8];
 Um_instruction r_c, r_a, r_b;
 uint32_t val_b, val_c, val_a;
 
-static inline void three_registers(Um_instruction word, uint32_t *r_a, 
-                                   uint32_t *r_b, uint32_t *r_c);
+// static inline void three_registers(Um_instruction word, uint32_t *r_a, 
+//                                    uint32_t *r_b, uint32_t *r_c);
 static inline void cmov(Um_instruction word);
 static inline void sload(Um_instruction word, uint32_t *counter);
 static inline void sstore(Um_instruction word);
@@ -38,7 +38,6 @@ static inline void in(Um_instruction word);
 static inline void loadp(Um_instruction word, uint32_t *counter);
 static inline void lv(Um_instruction word);
 static inline uint64_t Bitpack_getu(uint64_t word, unsigned width, unsigned lsb);
-static inline uint32_t get_register_at(Um_register n);
 
 Um_instruction read_instruction(Um_instruction word, uint32_t *counter)
 {
@@ -98,23 +97,25 @@ Um_instruction read_instruction(Um_instruction word, uint32_t *counter)
  * Parameters: Um_instruction, uint32_t*, uint32_t*, uint32_t*
  * Return: nothing
  */
-static inline void three_registers(Um_instruction word, uint32_t *r_a, 
-                                   uint32_t *r_b, uint32_t *r_c)
-{
-        *r_a = Bitpack_getu(word, REG_WIDTH, LSB_A);
-        *r_b = Bitpack_getu(word, REG_WIDTH, LSB_B);
-        *r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
-}
+// static inline void three_registers(Um_instruction word, uint32_t *r_a, 
+//                                    uint32_t *r_b, uint32_t *r_c)
+// {
+//         *r_a = Bitpack_getu(word, REG_WIDTH, LSB_A);
+//         *r_b = Bitpack_getu(word, REG_WIDTH, LSB_B);
+//         *r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
+// }
 	
 static inline void cmov(Um_instruction word)
 {
 	
-        three_registers(word, &r_a, &r_b, &r_c);
-	uint32_t val_c = get_register_at(r_c); 
+        r_a = Bitpack_getu(word, REG_WIDTH, LSB_A);
+        r_b = Bitpack_getu(word, REG_WIDTH, LSB_B);
+        r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
+	uint32_t val_c = r[r_c]; 
 	if(val_c != 0)
 	{
-		uint32_t val_b = get_register_at(r_b);
-		uint32_t val_a = get_register_at(r_a);
+		uint32_t val_b = r[r_b];
+		uint32_t val_a = r[r_a];
 		r[r_a] = val_b;
 	}
 }
@@ -122,10 +123,12 @@ static inline void cmov(Um_instruction word)
 static inline void sload(Um_instruction word, uint32_t *counter)
 {
         
-        three_registers(word, &r_a, &r_b, &r_c);
+        r_a = Bitpack_getu(word, REG_WIDTH, LSB_A);
+        r_b = Bitpack_getu(word, REG_WIDTH, LSB_B);
+        r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
 	
-	val_b = get_register_at(r_b);
-	val_c = get_register_at(r_c);
+	val_b = r[r_b];
+	val_c = r[r_c];
 	val_a = get_value_at(val_b, val_c);
 	
 	r[r_a] = val_a;
@@ -134,11 +137,13 @@ static inline void sload(Um_instruction word, uint32_t *counter)
 static inline void sstore(Um_instruction word)
 {
         
-        three_registers(word, &r_a, &r_b, &r_c);
+        r_a = Bitpack_getu(word, REG_WIDTH, LSB_A);
+        r_b = Bitpack_getu(word, REG_WIDTH, LSB_B);
+        r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
         
-        val_a = get_register_at(r_a);
-        val_b = get_register_at(r_b);
-        val_c = get_register_at(r_c);
+        val_a = r[r_a];
+        val_b = r[r_b];
+        val_c = r[r_c];
 
         set_value_at(val_a, val_b, val_c);        
 }
@@ -146,10 +151,12 @@ static inline void sstore(Um_instruction word)
 static inline void add(Um_instruction word)
 {
         uint32_t sum;
-        three_registers(word, &r_a, &r_b, &r_c);
+        r_a = Bitpack_getu(word, REG_WIDTH, LSB_A);
+        r_b = Bitpack_getu(word, REG_WIDTH, LSB_B);
+        r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
 
-        val_b = get_register_at(r_b);
-        val_c = get_register_at(r_c);
+        val_b = r[r_b];
+        val_c = r[r_c];
 
         sum = val_b + val_c;           
 
@@ -160,10 +167,12 @@ static inline void mult(Um_instruction word)
 {
         uint32_t product;
         
-        three_registers(word, &r_a, &r_b, &r_c);
+        r_a = Bitpack_getu(word, REG_WIDTH, LSB_A);
+        r_b = Bitpack_getu(word, REG_WIDTH, LSB_B);
+        r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
         
-        val_b = get_register_at(r_b);
-        val_c = get_register_at(r_c);
+        val_b = r[r_b];
+        val_c = r[r_c];
 
         product = val_b * val_c;            
 
@@ -174,10 +183,12 @@ static inline void div(Um_instruction word)
 {
         uint32_t quotient;
         
-        three_registers(word, &r_a, &r_b, &r_c);
+        r_a = Bitpack_getu(word, REG_WIDTH, LSB_A);
+        r_b = Bitpack_getu(word, REG_WIDTH, LSB_B);
+        r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
         
-        val_b = get_register_at(r_b);
-        val_c = get_register_at(r_c);
+        val_b = r[r_b];
+        val_c = r[r_c];
 
         quotient = val_b / val_c;          
 
@@ -188,10 +199,12 @@ static inline void nand(Um_instruction word)
 {
         uint32_t nand;
         
-        three_registers(word, &r_a, &r_b, &r_c);
+        r_a = Bitpack_getu(word, REG_WIDTH, LSB_A);
+        r_b = Bitpack_getu(word, REG_WIDTH, LSB_B);
+        r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
 
-        val_b = get_register_at(r_b);
-        val_c = get_register_at(r_c);
+        val_b = r[r_b];
+        val_c = r[r_c];
 
         nand = ~(val_b & val_c);
 
@@ -205,7 +218,7 @@ static inline void map(Um_instruction word)
         r_b = Bitpack_getu(word, REG_WIDTH, LSB_B);
         r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
 
-        length = get_register_at(r_c);
+        length = r[r_c];
         
         id = add_segment(length);
 	r[r_b] = id;
@@ -215,14 +228,14 @@ static inline void unmap(Um_instruction word)
 {
         r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
 
-        val_c = get_register_at(r_c);
+        val_c = r[r_c];
         remove_segment(val_c);
 }
 
 static inline void out(Um_instruction word)
 {
 	r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
-	val_c = get_register_at(r_c);
+	val_c = r[r_c];
 	fprintf(stdout, "%c", val_c);
 }
 
@@ -243,8 +256,8 @@ static inline void loadp(Um_instruction word, uint32_t *counter)
 {
 	r_b = Bitpack_getu(word, REG_WIDTH, LSB_B);
 	r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
-	val_b = get_register_at(r_b);
-	val_c = get_register_at(r_c);
+	val_b = r[r_b];
+	val_c = r[r_c];
 	if(val_b != 0) {
 		UArray_T program = (UArray_T)get_segment(val_b);
 		put_segment(program);
@@ -273,12 +286,4 @@ static inline uint64_t Bitpack_getu(uint64_t word, unsigned width, unsigned lsb)
                 word = word >> bitsr;
         /* ----- */
         return word;
-}
-
-static inline uint32_t get_register_at(Um_register n) 
-{
-	assert(n >= 0);
-	assert(n <= 7);
-	uint32_t val = r[n];
-	return val;
 }

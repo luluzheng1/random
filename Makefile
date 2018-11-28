@@ -61,7 +61,7 @@ all: um
 
 ##segment: segments.o 
 
-um: instructions.o memory.o um.o
+um: memory.o um.o
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 clean:
