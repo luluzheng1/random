@@ -39,7 +39,6 @@ static inline void loadp(Um_instruction word, uint32_t *counter);
 static inline void lv(Um_instruction word);
 static inline uint64_t Bitpack_getu(uint64_t word, unsigned width, unsigned lsb);
 static inline uint32_t get_register_at(Um_register n);
-static inline void set_register_at(Um_register n, uint32_t value);
 
 Um_instruction read_instruction(Um_instruction word, uint32_t *counter)
 {
@@ -116,7 +115,7 @@ static inline void cmov(Um_instruction word)
 	{
 		uint32_t val_b = get_register_at(r_b);
 		uint32_t val_a = get_register_at(r_a);
-		set_register_at(r_a, val_b);
+		r[r_a] = val_b;
 	}
 }
 
@@ -129,7 +128,7 @@ static inline void sload(Um_instruction word, uint32_t *counter)
 	val_c = get_register_at(r_c);
 	val_a = get_value_at(val_b, val_c);
 	
-	set_register_at(r_a, val_a);
+	r[r_a] = val_a;
 }
 
 static inline void sstore(Um_instruction word)
@@ -154,7 +153,7 @@ static inline void add(Um_instruction word)
 
         sum = val_b + val_c;           
 
-        set_register_at(r_a, sum);
+	r[r_a] = sum;
 }
 
 static inline void mult(Um_instruction word)
@@ -168,7 +167,7 @@ static inline void mult(Um_instruction word)
 
         product = val_b * val_c;            
 
-        set_register_at(r_a, product);
+	r[r_a] = product;
 }
 
 static inline void div(Um_instruction word)
@@ -182,7 +181,7 @@ static inline void div(Um_instruction word)
 
         quotient = val_b / val_c;          
 
-        set_register_at(r_a, quotient);
+	r[r_a] = quotient;
 }
 
 static inline void nand(Um_instruction word)
@@ -196,7 +195,7 @@ static inline void nand(Um_instruction word)
 
         nand = ~(val_b & val_c);
 
-        set_register_at(r_a, nand);
+	r[r_a] = nand;
 }
 
 static inline void map(Um_instruction word)
@@ -209,8 +208,7 @@ static inline void map(Um_instruction word)
         length = get_register_at(r_c);
         
         id = add_segment(length);
-
-        set_register_at(r_b, id);
+	r[r_b] = id;
 }
 
 static inline void unmap(Um_instruction word)
@@ -233,11 +231,11 @@ static inline void in(Um_instruction word)
 	uint32_t value = fgetc(stdin);
         r_c = Bitpack_getu(word, REG_WIDTH, LSB_C);
 	if((int32_t)value != EOF) {
-        	set_register_at(r_c, value);
+		r[r_c] = value;
 	}
 	else {
 		uint32_t marker = ~0;
-		set_register_at(r_c, marker);
+		r[r_c] = marker;
 	}
 }
 
@@ -260,16 +258,13 @@ static inline void lv(Um_instruction word)
 	uint32_t value;
 	r_a = Bitpack_getu(word, REG_WIDTH, 25);
 	value = Bitpack_getu(word, 25, 0);
-	set_register_at(r_a, value);
+	r[r_a] = value;
 }
 
 static inline uint64_t Bitpack_getu(uint64_t word, unsigned width, unsigned lsb)
 {
         unsigned hi = lsb + width; /* one beyond the most significant bit */
         unsigned bitsl = 64 - hi, bitsr = 64 - width;
-        assert(hi <= 64);
-        assert(bitsl <= 64);
-        assert(bitsr <= 64);
         /* left shift */
         if (bitsl != 64)
                 word = word << bitsl;
@@ -286,11 +281,4 @@ static inline uint32_t get_register_at(Um_register n)
 	assert(n <= 7);
 	uint32_t val = r[n];
 	return val;
-}
-
-static inline void set_register_at(Um_register n, uint32_t value)
-{
-	assert(n >= 0);
-	assert(n <= 7);
-	r[n] = value;
 }
