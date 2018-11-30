@@ -24,15 +24,18 @@ typedef enum Um_opcode {
 typedef uint32_t Umsegment_Id, Word, Um_instruction;
 typedef enum Um_register {r0 = 0, r1, r2, r3, r4, r5, r6, r7} Um_register;
 
+typedef struct Segment {
+	uint32_t *arr;
+	int size;
+} *Segment;
+
 uint32_t r[8];
 Um_instruction r_c, r_a, r_b;
 uint32_t val_b, val_c, val_a;
-Seq_T memory, id_tracker;
-int size;
-typedef struct segment {
-	uint32_t *arr;
-	int size;
-} *segment;
+Segment *memory;
+Seq_T id_tracker;
+int size, mem_length = 1;
+
 
 /*instructions.c*/
 static inline uint64_t Bitpack_getu(uint64_t word, unsigned width, 
@@ -59,7 +62,7 @@ static inline Umsegment_Id add_segment(int size);
 static inline void remove_segment(Umsegment_Id id);
 static inline void *get_segment(Umsegment_Id id);
 static inline uint32_t get_value_at(Umsegment_Id id, int offset);
-static inline void put_segment(void *segment);
+static inline void put_segment(void *Segment);
 static inline void set_value_at(Umsegment_Id id, int offset, uint32_t value);
 
 int main(int argc, char *argv[])
@@ -92,7 +95,6 @@ int main(int argc, char *argv[])
         }
         fclose(um_file);
         int op_code = 0;
-	int index = 0;
 	uint32_t counter = 0;
 	instruction = get_value_at(0, counter);
 	
@@ -260,10 +262,11 @@ static inline void loadp(Um_instruction word, uint32_t *counter)
 	val_b = r[r_b];
 	val_c = r[r_c];
 	if(val_b != 0) {
-		segment array = Seq_get(memory, val_b);
-		segment temp = Seq_put(memory, 0, array);
+		Segment array = memory[val_b];
+		Segment temp = memory[0];
 		free(temp->arr);
 		free(temp);
+		memory[0] = array;
 	}
 	get_value_at(0, val_c);
 	*counter = val_c;
@@ -355,11 +358,11 @@ static inline Um_instruction read_instruction(Um_instruction word,
  */
 static inline void memory_new(int size)
 {
-        memory = Seq_new(0);
-	segment zero_seg = malloc(sizeof(struct segment));
+        memory = calloc(1, sizeof(Segment));
+	Segment zero_seg = malloc(sizeof(struct Segment));
 	zero_seg->size = size;
         zero_seg->arr = calloc(zero_seg->size, sizeof(uint32_t));
-        Seq_addhi(memory,(void *)zero_seg);
+        memory[0] = zero_seg;
         id_tracker = Seq_new(size);
         size = 1;
 }
@@ -372,15 +375,15 @@ static inline void memory_new(int size)
 static inline void memory_free()
 {
         Seq_free(&id_tracker);
-        while (size > 0){
-		segment array = Seq_remhi(memory);
+        while (mem_length > 1){
+		Segment array = memory[mem_length -1];
                 if (array != NULL) {
-                        free(array->arr);
+			free(array->arr);
                         free(array);
-			size--;
 		}
+		mem_length--;
         }
-        Seq_free(&memory);
+        free(memory);
 }
 
 /* Function: add_segment
@@ -392,17 +395,22 @@ static inline Umsegment_Id add_segment(int s)
 {
         int id = 0;
         int length = Seq_length(id_tracker);
-	segment array = malloc(sizeof(struct segment));
+	Segment array = malloc(sizeof(struct Segment));
 	array->size = s;
 	array->arr = calloc(s, sizeof(Word));
         
         if(length != 0){
                 id = (int)(uintptr_t)Seq_remlo(id_tracker);
-                Seq_put(memory, id, array);
+                memory[id] = array;
+		
         }
         else {
-                Seq_addhi(memory, array);
-                id = Seq_length(memory) - 1;
+		Segment *temp = realloc(memory, sizeof(Segment) * (mem_length + 1));
+                if(temp != NULL) {
+			memory = temp;
+			memory[mem_length++] = array;
+			id = mem_length - 1;
+  		}
         }
         size += 1;
         return id;
@@ -410,18 +418,22 @@ static inline Umsegment_Id add_segment(int s)
 
 /* Function: remove_segment
  * Removes a segment from Memory and updates id_tracker sequence
- * Parameters: Memory, Unsegment_Id  
+ * Parameters: Memory, Unsegment_Id  memory[0] = zero_seg
  * Return: nothing
  */
 static inline void remove_segment(Umsegment_Id id)
 {
-	segment array = Seq_get(memory, id);
+	Segment array = memory[id];
 	free(array->arr);
 	free(array);
-	//array = malloc(0);
-        Seq_put(memory, id, NULL);
-        Seq_addhi(id_tracker, (void *)(uintptr_t)id); 
-        size -= 1;
+	size -= 1;
+        if(id < (uint32_t)mem_length) {
+		memory[id] = NULL;
+	}
+	else {
+		mem_length -= 1;
+	}
+	Seq_addhi(id_tracker, (void *)(uintptr_t)id); 
 }
 
 /* Function: get_segment
@@ -431,9 +443,9 @@ static inline void remove_segment(Umsegment_Id id)
  */
 static inline void *get_segment(Umsegment_Id id)
 {
-        segment array = Seq_get(memory, id);
+        Segment array = memory[id];
         int length = array->size;
-        segment cpy = malloc(sizeof(struct segment));
+        Segment cpy = malloc(sizeof(struct Segment));
 	memcpy(cpy->arr, array->arr, length * sizeof(uint32_t));
         return (void *)cpy;
 }
@@ -445,10 +457,10 @@ static inline void *get_segment(Umsegment_Id id)
  */
 static inline void put_segment(void *array)
 {
-        segment zero_seg = Seq_get(memory, 0);
+        Segment zero_seg = memory[0];
 	free(zero_seg->arr);
 	free(zero_seg);
-        Seq_put(memory, 0, array);
+        memory[0] = array;
 }
 
 /* Function: get_value_at
@@ -458,7 +470,7 @@ static inline void put_segment(void *array)
  */
 static inline Word get_value_at(Umsegment_Id id, int offset)
 {
-        segment array = Seq_get(memory, id);
+        Segment array = memory[id];
         /* COMBINE GET_WORD */
         Word word = array->arr[offset];
         return word;
@@ -471,6 +483,6 @@ static inline Word get_value_at(Umsegment_Id id, int offset)
  */
 static inline void set_value_at(Umsegment_Id id, int offset, Word value)
 {
-        segment array = Seq_get(memory, id);
+        Segment array = memory[id];
         array->arr[offset] = value;
 }
