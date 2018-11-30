@@ -1,14 +1,10 @@
 #include "mem.h"
-#include "seq.h"
-#include "assert.h"
 #include <stdio.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-
 #define BYTESIZE 8
-#define MEGABYTE 1000000000
 #define REG_WIDTH 3
 #define OP_WIDTH 4
 #define LSB_OP 28
@@ -16,7 +12,6 @@
 #define LSB_B 3
 #define LSB_C 0
 
-//uint32_t read_next_instruction(Memory m, Register r, uint32_t *counter);
 typedef enum Um_opcode {
         CMOV = 0, SLOAD, SSTORE, ADD, MUL, DIV,
         NAND, HALT, ACTIVATE, INACTIVATE, OUT, IN, LOADP, LV
@@ -27,15 +22,13 @@ typedef enum Um_register {r0 = 0, r1, r2, r3, r4, r5, r6, r7} Um_register;
 typedef struct Segment {
 	uint32_t *arr;
 	int size;
-} *Segment;
+} Segment;
 
-uint32_t r[8];
 Um_instruction r_c, r_a, r_b;
-uint32_t val_b, val_c, val_a;
+int size, mem_length = 1, id_length = 0, id_index = 0;
+uint32_t val_b, val_c, val_a, r[8];
+uint32_t *id_tracker;
 Segment *memory;
-Seq_T id_tracker;
-int size, mem_length = 1;
-
 
 /*instructions.c*/
 static inline uint64_t Bitpack_getu(uint64_t word, unsigned width, 
@@ -43,7 +36,7 @@ static inline uint64_t Bitpack_getu(uint64_t word, unsigned width,
 static inline Um_instruction read_instruction(Um_instruction word, 
 					      uint32_t *counter);
 static inline void cmov(Um_instruction word);
-static inline void sload(Um_instruction word, uint32_t *counter);
+static inline void sload(Um_instruction word);
 static inline void sstore(Um_instruction word);
 static inline void add(Um_instruction word);
 static inline void mult(Um_instruction word);
@@ -60,9 +53,7 @@ static inline void memory_new(int size);
 static inline void memory_free();
 static inline Umsegment_Id add_segment(int size);
 static inline void remove_segment(Umsegment_Id id);
-static inline void *get_segment(Umsegment_Id id);
 static inline uint32_t get_value_at(Umsegment_Id id, int offset);
-static inline void put_segment(void *Segment);
 static inline void set_value_at(Umsegment_Id id, int offset, uint32_t value);
 
 int main(int argc, char *argv[])
@@ -76,7 +67,6 @@ int main(int argc, char *argv[])
         struct stat s;
         stat(argv[1], &s);
         int file_size = s.st_size;
-        assert(file_size < MEGABYTE);
 
         memory_new(file_size / 4);
         /* Fill 0 segment with all instructions */
@@ -118,12 +108,11 @@ static inline void cmov(Um_instruction word)
 	if(val_c != 0)
 	{
 		uint32_t val_b = r[r_b];
-		uint32_t val_a = r[r_a];
 		r[r_a] = val_b;
 	}
 }
 
-static inline void sload(Um_instruction word, uint32_t *counter)
+static inline void sload(Um_instruction word)
 {
         
         r_a = Bitpack_getu(word, REG_WIDTH, LSB_A);
@@ -135,6 +124,7 @@ static inline void sload(Um_instruction word, uint32_t *counter)
 	val_a = get_value_at(val_b, val_c);
 	
 	r[r_a] = val_a;
+	
 }
 
 static inline void sstore(Um_instruction word)
@@ -263,10 +253,16 @@ static inline void loadp(Um_instruction word, uint32_t *counter)
 	val_c = r[r_c];
 	if(val_b != 0) {
 		Segment array = memory[val_b];
-		Segment temp = memory[0];
+		Segment *temp = &memory[0];
 		free(temp->arr);
-		free(temp);
-		memory[0] = array;
+		int length = array.size;
+		Segment cpy;
+		uint32_t *cpy_temp = malloc(length * sizeof(uint32_t));
+		uint32_t *array_temp = array.arr;
+		memmove(cpy_temp, array_temp, length * sizeof(uint32_t));
+		cpy.arr = cpy_temp;
+		cpy.size = length;
+		memory[0] = cpy;
 	}
 	get_value_at(0, val_c);
 	*counter = val_c;
@@ -282,15 +278,12 @@ static inline void lv(Um_instruction word)
 
 static inline uint64_t Bitpack_getu(uint64_t word, unsigned width, unsigned lsb)
 {
-        unsigned hi = lsb + width; /* one beyond the most significant bit */
+        unsigned hi = lsb + width;
         unsigned bitsl = 64 - hi, bitsr = 64 - width;
-        /* left shift */
         if (bitsl != 64)
                 word = word << bitsl;
-        /* right shift */
         if (bitsr != 64)
                 word = word >> bitsr;
-        /* ----- */
         return word;
 }
 
@@ -304,7 +297,7 @@ static inline Um_instruction read_instruction(Um_instruction word,
                         cmov(word);
 			break;
 		case SLOAD :
-                        sload(word, counter);
+                        sload(word);
 			break;
 		case SSTORE :
                         sstore(word);
@@ -348,8 +341,6 @@ static inline Um_instruction read_instruction(Um_instruction word,
 	return op;
 }
 
-
-
 /* Function: memory_new 
  * Allocates space for sequences in memory struct and adds 0 segment to memory
  * sequence
@@ -359,11 +350,11 @@ static inline Um_instruction read_instruction(Um_instruction word,
 static inline void memory_new(int size)
 {
         memory = calloc(1, sizeof(Segment));
-	Segment zero_seg = malloc(sizeof(struct Segment));
-	zero_seg->size = size;
-        zero_seg->arr = calloc(zero_seg->size, sizeof(uint32_t));
+	Segment zero_seg;
+	zero_seg.size = size;
+        zero_seg.arr = calloc(zero_seg.size, sizeof(uint32_t));
         memory[0] = zero_seg;
-        id_tracker = Seq_new(size);
+        id_tracker = NULL;
         size = 1;
 }
 
@@ -374,15 +365,14 @@ static inline void memory_new(int size)
  */
 static inline void memory_free()
 {
-        Seq_free(&id_tracker);
-        while (mem_length > 1){
-		Segment array = memory[mem_length -1];
-                if (array != NULL) {
+        while (mem_length > 0){
+		Segment *array = &memory[mem_length -1];
+                if (array->size != 0) {
 			free(array->arr);
-                        free(array);
 		}
 		mem_length--;
         }
+        free(id_tracker);
         free(memory);
 }
 
@@ -394,15 +384,14 @@ static inline void memory_free()
 static inline Umsegment_Id add_segment(int s)
 {
         int id = 0;
-        int length = Seq_length(id_tracker);
-	Segment array = malloc(sizeof(struct Segment));
-	array->size = s;
-	array->arr = calloc(s, sizeof(Word));
+	Segment array;
+	array.size = s;
+	array.arr = calloc(s, sizeof(Word));
         
-        if(length != 0){
-                id = (int)(uintptr_t)Seq_remlo(id_tracker);
+        if(id_length != 0){
+                id = id_tracker[--id_index];
+                id_length--;
                 memory[id] = array;
-		
         }
         else {
 		Segment *temp = realloc(memory, sizeof(Segment) * (mem_length + 1));
@@ -423,44 +412,19 @@ static inline Umsegment_Id add_segment(int s)
  */
 static inline void remove_segment(Umsegment_Id id)
 {
-	Segment array = memory[id];
+	Segment *array = &memory[id];
 	free(array->arr);
-	free(array);
+        Segment empty = {NULL, 0};
 	size -= 1;
-        if(id < (uint32_t)mem_length) {
-		memory[id] = NULL;
-	}
-	else {
+        if(id < (uint32_t)mem_length)
+		memory[id] = empty;
+	else
 		mem_length -= 1;
-	}
-	Seq_addhi(id_tracker, (void *)(uintptr_t)id); 
-}
-
-/* Function: get_segment
- * Gets segment of provided segment id
- * Parameters: Memory, Unsegment_Id
- * Return: void *
- */
-static inline void *get_segment(Umsegment_Id id)
-{
-        Segment array = memory[id];
-        int length = array->size;
-        Segment cpy = malloc(sizeof(struct Segment));
-	memcpy(cpy->arr, array->arr, length * sizeof(uint32_t));
-        return (void *)cpy;
-}
-
-/* Function: put_segment
- * Replaces zero segment with provided segment
- * Parameters: Memory, void *
- * Return: nothing
- */
-static inline void put_segment(void *array)
-{
-        Segment zero_seg = memory[0];
-	free(zero_seg->arr);
-	free(zero_seg);
-        memory[0] = array;
+        if (id_index == id_length){
+                id_tracker = realloc(id_tracker,sizeof(uint32_t) * (id_length + 1));
+                id_length++;
+        }
+	id_tracker[id_index++] = id;
 }
 
 /* Function: get_value_at
@@ -472,7 +436,7 @@ static inline Word get_value_at(Umsegment_Id id, int offset)
 {
         Segment array = memory[id];
         /* COMBINE GET_WORD */
-        Word word = array->arr[offset];
+        Word word = array.arr[offset];
         return word;
 }
 
@@ -484,5 +448,5 @@ static inline Word get_value_at(Umsegment_Id id, int offset)
 static inline void set_value_at(Umsegment_Id id, int offset, Word value)
 {
         Segment array = memory[id];
-        array->arr[offset] = value;
+        array.arr[offset] = value;
 }
